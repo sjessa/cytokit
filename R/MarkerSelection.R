@@ -383,6 +383,157 @@ decision_tree<-function(training_data, training_labels, n_gene = 2){
 }
 
 
+buildTree<-function(input_data, input_labels, Tree){
+
+    tree <- Tree$Tree
+    gene_id <- Tree$genes
+    markers_tyeps <- Tree$types
+    error_change <- Tree$error_change
+    data_list <- Tree$data_list
+    data_index <- Tree$next_split_index
+    current_index <- Tree$current_index
+
+
+    training_data<-data_list[[data_index]]$data
+    training_data <-input_data[training_data,]
+    training_labels<-data_list[[data_index]]$labels
+
+    df.rf <- randomForest( y=as.factor(training_labels), training_data, ntree = 1,maxnode=2)
+    tree_matrix<-getTree(df.rf, labelVar = TRUE)
+
+
+
+
+    currentNode<-Node()
+    currentNode$split_val<-tree_matrix[1,4]
+    currentNode$split_var<-tree_matrix[1,3]
+    predicted_labels<-predict(df.rf,training_data, type = "class")
+
+    j <- length(tree)+1
+
+    print(j)
+
+
+    left<-Data_obj()
+    #left$data<-training_data[which(training_data[,currentNode$split_var]<=currentNode$split_val),]
+    left$data<-which(training_data[,currentNode$split_var]<=currentNode$split_val)
+    left$labels<-training_labels[which(training_data[,currentNode$split_var]<=currentNode$split_val)] # might not be data frame
+    left$belongs_to<-j
+    left$entropy<-getEntropy(left$labels)
+    left$is_left<-TRUE
+    left$prediction<-round(mean(as.numeric(left$labels)))# needs to be chaged if classification is multi-class
+
+    right<-Data_obj()
+    #right$data<-training_data[which(training_data[,currentNode$split_var]>currentNode$split_val),]
+    right$data<-which(training_data[,currentNode$split_var]>currentNode$split_val)
+    right$labels<-training_labels[which(training_data[,currentNode$split_var]>currentNode$split_val)]
+    right$belongs_to<-j
+    right$entropy<-getEntropy(right$labels)
+    right$is_left<-FALSE
+    right$prediction<-round(mean(as.numeric(right$labels)))# need to be changed if classificiation is multi-class
+
+    if(is.na(right$prediction)){
+        right$prediction<-left$prediction
+    }else if(is.na(left$prediction)){
+        left$prediction<-right$prediction
+    }
+
+
+    currentNode$left_prediction<-left$prediction
+    currentNode$right_prediction<-right$prediction
+
+
+
+    if(j>1){
+        parent<-data_list[[data_index]]$belongs_to
+        if(data_list[[data_index]]$is_left){
+            tree[[parent]]$left_child<-j
+        }else{
+            tree[[parent]]$right_child<-j
+        }
+
+    }
+
+    data_list[[data_index]]$entropy<-0
+
+
+    tree[[j]]<-currentNode
+    current_index<-current_index+1
+    data_list[[current_index]]<-left
+    current_index<-current_index+1
+    data_list[[current_index]]<-right
+
+    error_change<-c(error_change, get.Error(tree,input_data[data_list[[1]]$data,],data_list[[1]]$labels))
+
+    data_index<-get.split_index(data_list) # decides which place to split
+    return(list(Tree = tree,
+                genes = gene_id,
+                types = markers_tyeps,
+                error_change = error_change,
+                data_list = data_list,
+                next_split_index = data_index,
+                current_index = current_index))
+}
+
+initEmptyTree <-function(input_data, input_labels){
+    tree <- list()
+    data_list<-list()
+    data_list[[1]]<-Data_obj()
+    data_list[[1]]$data<-1:NROW(input_data)
+    data_list[[1]]$labels<-input_labels
+    data_index<-1 # keeps tract of the largest error
+    current_index<-1 # keeps of tract of howmany data are in the list
+    error_change<-c()
+    markers_tyeps<-c()
+    gene_id<-c()
+
+
+    currentTree = list(Tree = tree,
+                       genes = gene_id,
+                       types = markers_tyeps,
+                       error_change = error_change,
+                       data_list = data_list,
+                       next_split_index = data_index,
+                       current_index = current_index)
+    return(currentTree)
+}
+
+
+buildTreeByLevel <- function(input_data, input_labels, genes = colnames(input_data), tree_list = NULL, per_tree_extension = 10){
+
+    retList <- list()
+    if(is.null(tree_list)){
+
+        for(i in 1:per_tree_extension){
+            Tree <- initEmptyTree(input_data = input_data, input_labels = input_labels)
+            Tree <-buildTree(input_data[,genes], input_labels, Tree)
+            retList[[i]] <- Tree
+        }
+    }else{
+        for(Tree in tree_list){
+            for (i in 1:per_tree_extension){
+                retList[[(length(retList)+1)]]<-buildTree(input_data[,genes], input_labels, Tree)
+            }
+        }
+    }
+
+    return(retList)
+}
+
+
+
+evaluateTree <- function(Tree){
+
+}
+
+
+featureImportance <- function(){
+
+}
+
+
+
+
 
 ### The above functions are all internal functions###
 
