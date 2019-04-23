@@ -520,10 +520,34 @@ buildTreeByLevel <- function(input_data, input_labels, genes = colnames(input_da
     return(retList)
 }
 
+binarizeLabels <-function(input_labels, class_of_interest){
+  input_labels[which(input_labels == class_of_interest)] = -1
+  input_labels[which(input_labels != -1)] = 1
+  input_labels[which(input_labels == -1)] = 0
+  return(input_labels)
+}
 
 
-evaluateTree <- function(Tree){
-
+evaluateTree <- function(tree_list, input_data, input_labels){
+  Errors <- c()
+  gene_name_list <- c()
+  marker_types_list <- c()
+  for(Tree in tree_list){
+    currentError <- get.Error(Tree$Tree, input_data, input_labels)
+    Errors <- rbind(Errors, currentError)
+    gene_names<-get.geneid(Tree$Tree)
+    gene_name_list <- rbind(gene_name_list, gene_names)
+    
+    marker_types <- get.markers_types(Tree$Tree, gene_names)
+    marker_types_list <- rbind(marker_types)
+  }
+  
+  retFrame <- data.frame(gene_name_list, marker_types_list, Errors)
+  colnames(retFrame)[NCOL(retFrame)] <- "inverse_error"
+  colnames(retFrame)[NCOL(retFrame)-1] <- "recall"
+  colnames(retFrame)[NCOL(retFrame)-2] <-"percision"
+  
+  return(retFrame)
 }
 
 
