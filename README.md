@@ -1,4 +1,6 @@
-[![Build Status](https://travis-ci.com/sjessa/cytokit.svg?token=ckZxkx4uN2RZSSwsdpLM&branch=master)](https://travis-ci.com/sjessa/cytokit)
+
+*NB* This package is no longer being developed. Please check out our package [`cytobox`](https://github.com/fungenomics/cytobox), which builds and improves `cytokit` functionality.
+
 
 # cytokit: README
 Kleinman Lab toolkit for analyzing single cell RNA-seq data.
